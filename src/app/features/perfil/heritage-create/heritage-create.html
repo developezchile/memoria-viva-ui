@@ -1,0 +1,155 @@
+<mv-header title="Nuevo mensaje" back="/perfil/herencia" />
+
+<div class="screen-body with-nav">
+  <div class="content">
+    <p class="intro emotive">Deja algo de ti para el futuro</p>
+
+    <!-- Formato -->
+    <div class="formats" role="radiogroup" aria-label="Formato del mensaje">
+      @for (f of formats; track f.id) {
+        <button
+          type="button"
+          role="radio"
+          class="format"
+          [class.active]="format() === f.id"
+          [attr.aria-checked]="format() === f.id"
+          (click)="selectFormat(f.id)"
+        >
+          <mv-icon [name]="f.icon" [size]="22" [color]="format() === f.id ? '#FFFFFF' : '#A0503E'" />
+          <span>{{ f.label }}</span>
+        </button>
+      }
+    </div>
+
+    <!-- Contenido -->
+    @if (format() === 'texto') {
+      <div class="field">
+        <label class="field-label" for="her-text">Tu mensaje</label>
+        <textarea
+          id="her-text"
+          class="textarea letter"
+          placeholder="Querida familia…"
+          [value]="text()"
+          (input)="text.set($any($event.target).value)"
+        ></textarea>
+        @if (tried() && errors().content) {
+          <p class="error-text">{{ errors().content }}</p>
+        }
+      </div>
+    } @else {
+      <section class="card recorder" [attr.aria-label]="format() === 'audio' ? 'Grabadora de audio' : 'Grabadora de video'">
+        @switch (recState()) {
+          @case ('recording') {
+            @if (format() === 'video') {
+              <video #live class="live" autoplay muted playsinline aria-label="Vista previa de la cámara"></video>
+            }
+            <p class="timer" aria-live="off"><span class="rec-dot" aria-hidden="true"></span>{{ timerLabel() }}</p>
+            <div class="bar" aria-hidden="true"><span [style.width.%]="progress()"></span></div>
+            <p class="hint">Máximo {{ maxLabel }}</p>
+            <button type="button" class="big-btn stop" aria-label="Detener grabación" (click)="stopRecording()">
+              <mv-icon name="stop" [size]="30" color="#FFFFFF" [filled]="true" />
+            </button>
+          }
+          @case ('recorded') {
+            @if (format() === 'video') {
+              <video class="preview" controls playsinline [src]="blobUrl()" (loadedmetadata)="onMetadata($event)"></video>
+            } @else {
+              <audio class="audio" controls [src]="blobUrl()" (loadedmetadata)="onMetadata($event)"></audio>
+            }
+            @if (durationLabel()) {
+              <p class="hint">Duración {{ durationLabel() }}</p>
+            }
+            @if (fallback()) {
+              <label class="btn-secondary file-btn">
+                <mv-icon name="image" [size]="18" color="#A0503E" /> Elegir otro archivo
+                <input type="file" class="sr-only" [accept]="format() + '/*'" (change)="onFile($event)" />
+              </label>
+            } @else {
+              <button type="button" class="btn-secondary" (click)="rerecord()">
+                <mv-icon name="mic" [size]="18" color="#A0503E" /> Volver a grabar
+              </button>
+            }
+          }
+          @default {
+            @if (fallback()) {
+              <p class="hint">{{ fallbackReason() }}</p>
+              <label class="btn-secondary file-btn">
+                <mv-icon name="image" [size]="18" color="#A0503E" />
+                Adjuntar {{ format() === 'audio' ? 'audio' : 'video' }}
+                <input type="file" class="sr-only" [accept]="format() + '/*'" (change)="onFile($event)" />
+              </label>
+              <button type="button" class="btn-link" (click)="startRecording()">Intentar grabar de nuevo</button>
+            } @else {
+              <button
+                type="button"
+                class="big-btn"
+                [attr.aria-label]="format() === 'audio' ? 'Comenzar a grabar audio' : 'Comenzar a grabar video'"
+                (click)="startRecording()"
+              >
+                <mv-icon [name]="format() === 'audio' ? 'mic' : 'video'" [size]="32" color="#FFFFFF" />
+              </button>
+              <p class="timer idle">00:00</p>
+              <p class="hint">Toca para grabar · máximo {{ maxLabel }}</p>
+            }
+          }
+        }
+        @if (tried() && errors().content) {
+          <p class="error-text">{{ errors().content }}</p>
+        }
+      </section>
+    }
+
+    <!-- Título -->
+    <div class="field">
+      <label class="field-label" for="her-title">Título</label>
+      <input
+        id="her-title"
+        class="input"
+        maxlength="80"
+        placeholder="Para cuando te gradúes"
+        [value]="title()"
+        (input)="title.set($any($event.target).value)"
+      />
+      @if (tried() && errors().title) {
+        <p class="error-text">{{ errors().title }}</p>
+      }
+    </div>
+
+    <!-- Destinatarios -->
+    <fieldset class="field">
+      <legend class="field-label">¿Para quién es?</legend>
+      <div class="chips">
+        <button type="button" class="pick" [class.on]="isAll()" [attr.aria-pressed]="isAll()" (click)="toIds.set([])">
+          Toda la familia
+        </button>
+        @for (m of recipients(); track m.id) {
+          @let on = toIds().includes(m.id);
+          <button type="button" class="pick" [class.on]="on" [attr.aria-pressed]="on" (click)="toggleRecipient(m.id)">
+            {{ m.name }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <!-- Fecha de entrega -->
+    <fieldset class="field">
+      <legend class="field-label">¿Cuándo debe abrirse?</legend>
+      <div class="row">
+        <div class="col">
+          <label class="sr-only" for="her-date">Fecha de entrega</label>
+          <input id="her-date" class="input" type="date" [min]="today" [value]="date()" (input)="date.set($any($event.target).value)" />
+        </div>
+        <div class="col narrow">
+          <label class="sr-only" for="her-time">Hora de entrega</label>
+          <input id="her-time" class="input" type="time" [value]="time()" (input)="time.set($any($event.target).value)" />
+        </div>
+      </div>
+      @if (tried() && errors().date) {
+        <p class="error-text">{{ errors().date }}</p>
+      }
+      <p class="note"><mv-icon name="lock" [size]="14" color="#A89070" /> Quedará guardado y bloqueado hasta ese momento.</p>
+    </fieldset>
+
+    <button type="button" class="btn-primary" [disabled]="recState() === 'recording'" (click)="save()">Guardar</button>
+  </div>
+</div>

@@ -1,0 +1,84 @@
+// En móvil la app ocupa toda la pantalla; en escritorio se muestra dentro de un marco de teléfono.
+:host {
+  display: block;
+  height: 100dvh;
+}
+
+.stage {
+  height: 100%;
+}
+
+.phone-notch {
+  display: none;
+}
+
+.phone,
+.phone-screen,
+.outlet {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: var(--fondo);
+}
+
+@media (min-width: 520px) {
+  :host {
+    min-height: 100dvh;
+    height: auto;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(115, 123, 76, 0.18), transparent 45%),
+      radial-gradient(circle at 80% 90%, rgba(160, 80, 62, 0.14), transparent 45%),
+      #1a1208;
+  }
+
+  .stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 24px 16px;
+  }
+
+  .phone {
+    height: auto;
+    padding: 36px 12px 36px;
+    border-radius: 48px;
+    background: #0d0d0d;
+    box-shadow:
+      0 24px 80px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+
+    // Indicador de inicio
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      width: 100px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateX(-50%);
+    }
+  }
+
+  .phone-notch {
+    display: block;
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    z-index: 100;
+    width: 72px;
+    height: 10px;
+    border-radius: 5px;
+    background: #262626;
+    transform: translateX(-50%);
+  }
+
+  .phone-screen {
+    width: 360px;
+    height: min(800px, calc(100dvh - 120px));
+    min-height: 620px;
+    border-radius: 38px;
+  }
+}

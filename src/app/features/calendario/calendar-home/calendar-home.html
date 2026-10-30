@@ -1,0 +1,261 @@
+<mv-header title="Mi Calendario">
+  <button type="button" class="icon-btn" aria-label="Galería de rituales" routerLink="/calendario/rituales">
+    <mv-icon name="candle" [size]="22" />
+  </button>
+</mv-header>
+
+<div class="screen-body with-nav">
+  <!-- Vista mensual -->
+  <section class="card month" aria-labelledby="month-title">
+    <div class="month-nav">
+      <button type="button" class="icon-btn" aria-label="Mes anterior" (click)="shiftMonth(-1)">
+        <mv-icon name="chevron-left" />
+      </button>
+      <h2 id="month-title" class="month-title" aria-live="polite">{{ month() | date: 'MMMM y' }}</h2>
+      <button type="button" class="icon-btn" aria-label="Mes siguiente" (click)="shiftMonth(1)">
+        <mv-icon name="chevron-right" />
+      </button>
+    </div>
+
+    <div class="grid weekdays" aria-hidden="true">
+      @for (w of weekdays; track $index) {
+        <span>{{ w.short }}</span>
+      }
+    </div>
+
+    <div class="grid days" role="group" aria-label="Días del mes">
+      @for (cell of grid(); track $index) {
+        @if (cell) {
+          <button
+            type="button"
+            class="day"
+            [class.today]="cell.key === todayKey"
+            [class.selected]="cell.key === selected()"
+            [attr.aria-label]="cell.label"
+            [attr.aria-pressed]="cell.key === selected()"
+            [attr.aria-current]="cell.key === todayKey ? 'date' : null"
+            (click)="selected.set(cell.key)"
+          >
+            <span class="num">{{ cell.date.getDate() }}</span>
+            <span class="dots" aria-hidden="true">
+              @if (cell.hasEvents) { <i class="dot ev"></i> }
+              @if (cell.hasTasks) { <i class="dot tk"></i> }
+            </span>
+          </button>
+        } @else {
+          <span class="day empty" aria-hidden="true"></span>
+        }
+      }
+    </div>
+
+    <div class="legend">
+      <span><i class="dot ev"></i> Eventos</span>
+      <span><i class="dot tk"></i> Tareas</span>
+      @if (selected() !== todayKey) {
+        <button type="button" class="btn-link" (click)="goToday()">Ir a hoy</button>
+      }
+    </div>
+  </section>
+
+  <div class="add-row">
+    <button type="button" class="btn-primary" (click)="openEvent()">
+      <mv-icon name="plus" color="#FFFFFF" [size]="18" /> Evento
+    </button>
+    <button type="button" class="btn-secondary" (click)="openTask()">
+      <mv-icon name="plus" color="#A0503E" [size]="18" /> Tarea
+    </button>
+  </div>
+
+  <!-- Agenda del día seleccionado -->
+  <section class="block" aria-labelledby="agenda-title">
+    <h2 id="agenda-title" class="section-title cap">
+      {{ selectedDate() | date: "EEEE d 'de' MMMM" }}
+      @if (selected() === todayKey) { <span class="today-tag">Hoy</span> }
+    </h2>
+
+    @if (dayEvents().length || dayTasks().length) {
+      @if (dayEvents().length) {
+        <div class="card list">
+          @for (ev of dayEvents(); track ev.id) {
+            <a class="list-row" [routerLink]="['/calendario/evento', ev.id]">
+              <span class="kind-emoji" aria-hidden="true">{{ kindOf[ev.kind].emoji }}</span>
+              <span class="grow">
+                <span class="row-title">{{ ev.title }}</span>
+                <span class="row-sub">{{ ev.date | date: 'HH:mm' }} · {{ kindOf[ev.kind].label }}</span>
+              </span>
+              <mv-icon name="chevron-right" [size]="18" color="#A89070" />
+            </a>
+          }
+        </div>
+      }
+      @if (dayTasks().length) {
+        <div class="card list">
+          @for (task of dayTasks(); track task.id) {
+            <ng-container *ngTemplateOutlet="taskRow; context: { $implicit: task }" />
+          }
+        </div>
+      }
+    } @else {
+      <mv-empty-state emoji="🗓️" title="No hay eventos ni tareas para este día" message="Puedes agendar un momento para recordar juntos o repartir una tarea familiar.">
+        <button type="button" class="btn-secondary" (click)="openEvent()">Agendar un evento</button>
+      </mv-empty-state>
+    }
+  </section>
+
+  <!-- Próximos eventos -->
+  <section class="block" aria-labelledby="upcoming-title">
+    <h2 id="upcoming-title" class="section-title">Próximos eventos</h2>
+    @for (ev of upcoming(); track ev.id) {
+      <a class="card event-card" [routerLink]="['/calendario/evento', ev.id]">
+        <span class="date-block" aria-hidden="true">
+          <span class="d">{{ ev.date | date: 'd' }}</span>
+          <span class="m">{{ ev.date | date: 'MMM' }}</span>
+        </span>
+        <span class="grow">
+          <span class="row-title">{{ ev.title }}</span>
+          <span class="sr-only">{{ ev.date | date: "EEEE d 'de' MMMM" }}</span>
+          <span class="badge" [style.background]="kindOf[ev.kind].color">{{ kindOf[ev.kind].label }}</span>
+        </span>
+        @if (ev.memorialIds.length) {
+          <span class="mem-stack" aria-hidden="true">
+            @for (mid of ev.memorialIds.slice(0, 2); track mid) {
+              <mv-person-avatar [id]="mid" [size]="36" />
+            }
+          </span>
+        }
+      </a>
+    } @empty {
+      <p class="muted">No hay eventos próximos. Las fechas importantes merecen ser recordadas en familia.</p>
+    }
+  </section>
+
+  <!-- Tareas familiares pendientes -->
+  <section class="block" aria-labelledby="tasks-title">
+    <h2 id="tasks-title" class="section-title">Tareas familiares</h2>
+    @if (pendingTasks().length) {
+      <div class="card list">
+        @for (task of pendingTasks(); track task.id) {
+          <ng-container *ngTemplateOutlet="taskRow; context: { $implicit: task, showDate: true }" />
+        }
+      </div>
+    } @else {
+      <p class="muted">Todo al día. Gracias por cuidarse entre todos 💛</p>
+    }
+  </section>
+</div>
+
+<ng-template #taskRow let-task let-showDate="showDate">
+  <div class="list-row task" [class.done]="task.done">
+    <input
+      type="checkbox"
+      class="check"
+      [id]="'tk-' + task.id + (showDate ? '-p' : '')"
+      [checked]="task.done"
+      (change)="toggle(task)"
+    />
+    <label class="grow" [for]="'tk-' + task.id + (showDate ? '-p' : '')">
+      <span class="row-title">{{ task.title }}</span>
+      <span class="row-sub">
+        {{ family.nameOf(task.assigneeId) }}
+        @if (showDate) { · {{ task.date | date: "EEE d 'de' MMM" }} }
+      </span>
+    </label>
+    <button type="button" class="icon-btn" [attr.aria-label]="'Eliminar tarea ' + task.title" (click)="removeTask(task)">
+      <mv-icon name="trash" [size]="18" color="#A89070" />
+    </button>
+  </div>
+</ng-template>
+
+<!-- Modal 39: Crear evento -->
+<mv-sheet [open]="eventOpen()" title="Nuevo evento" (closed)="eventOpen.set(false)">
+  <form class="form" (submit)="$event.preventDefault(); saveEvent()" novalidate>
+    <div>
+      <label class="field-label" for="ev-title">Nombre del evento *</label>
+      <input id="ev-title" class="input" maxlength="80" placeholder="Ej: Cumpleaños de la abuela"
+        [value]="evTitle()" (input)="evTitle.set($any($event.target).value)"
+        [attr.aria-invalid]="!!evTitleError()" aria-describedby="ev-title-err" />
+      @if (evTitleError()) { <p id="ev-title-err" class="error-text">{{ evTitleError() }}</p> }
+    </div>
+    <div class="two">
+      <div>
+        <label class="field-label" for="ev-date">Fecha *</label>
+        <input id="ev-date" type="date" class="input" [value]="evDate()" (input)="evDate.set($any($event.target).value)" />
+      </div>
+      <div>
+        <label class="field-label" for="ev-time">Hora</label>
+        <input id="ev-time" type="time" class="input" [value]="evTime()" (input)="evTime.set($any($event.target).value)" />
+      </div>
+    </div>
+    @if (evDateError()) { <p class="error-text">{{ evDateError() }}</p> }
+    <div>
+      <label class="field-label" for="ev-kind">Tipo</label>
+      <select id="ev-kind" class="select" (change)="evKind.set($any($event.target).value)">
+        @for (k of kinds; track k.id) {
+          <option [value]="k.id" [selected]="k.id === evKind()">{{ k.emoji }} {{ k.label }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label class="field-label" for="ev-desc">Descripción</label>
+      <textarea id="ev-desc" class="textarea" maxlength="400" placeholder="¿Qué harán? ¿Dónde se juntan?"
+        [value]="evDesc()" (input)="evDesc.set($any($event.target).value)"></textarea>
+    </div>
+    <fieldset>
+      <legend class="field-label">Participantes</legend>
+      <div class="chips">
+        @for (m of family.members(); track m.id) {
+          @let on = evParticipants().includes(m.id);
+          <button type="button" class="pick" [class.on]="on" [attr.aria-pressed]="on" (click)="toggleIn(evParticipants, m.id)">
+            <mv-person-avatar [id]="m.id" [size]="24" /> {{ m.name.split(' ')[0] }}
+          </button>
+        }
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend class="field-label">¿A quién recuerdan?</legend>
+      <div class="chips">
+        @for (m of family.memorials(); track m.id) {
+          @let on = evMemorials().includes(m.id);
+          <button type="button" class="pick golden" [class.on]="on" [attr.aria-pressed]="on" (click)="toggleIn(evMemorials, m.id)">
+            <mv-person-avatar [id]="m.id" [size]="24" /> {{ m.name }}
+          </button>
+        }
+      </div>
+    </fieldset>
+    <button type="submit" class="sr-only" tabindex="-1">Guardar</button>
+  </form>
+  <div sheet-actions>
+    <button type="button" class="btn-primary" (click)="saveEvent()">Guardar evento</button>
+  </div>
+</mv-sheet>
+
+<!-- Modal 40: Crear tarea -->
+<mv-sheet [open]="taskOpen()" title="Nueva tarea" (closed)="taskOpen.set(false)">
+  <form class="form" (submit)="$event.preventDefault(); saveTask()" novalidate>
+    <div>
+      <label class="field-label" for="tk-title">¿Qué hay que hacer? *</label>
+      <input id="tk-title" class="input" maxlength="100" placeholder="Ej: Llevar flores al jardín"
+        [value]="tkTitle()" (input)="tkTitle.set($any($event.target).value)"
+        [attr.aria-invalid]="!!tkTitleError()" aria-describedby="tk-title-err" />
+      @if (tkTitleError()) { <p id="tk-title-err" class="error-text">{{ tkTitleError() }}</p> }
+    </div>
+    <div>
+      <label class="field-label" for="tk-who">Responsable</label>
+      <select id="tk-who" class="select" (change)="tkAssignee.set($any($event.target).value)">
+        <option value="todos" [selected]="tkAssignee() === 'todos'">Toda la familia</option>
+        @for (m of family.members(); track m.id) {
+          <option [value]="m.id" [selected]="m.id === tkAssignee()">{{ m.name }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label class="field-label" for="tk-date">Fecha *</label>
+      <input id="tk-date" type="date" class="input" [value]="tkDate()" (input)="tkDate.set($any($event.target).value)" />
+      @if (tkDateError()) { <p class="error-text">{{ tkDateError() }}</p> }
+    </div>
+    <button type="submit" class="sr-only" tabindex="-1">Guardar</button>
+  </form>
+  <div sheet-actions>
+    <button type="button" class="btn-primary" (click)="saveTask()">Asignar tarea</button>
+  </div>
+</mv-sheet>

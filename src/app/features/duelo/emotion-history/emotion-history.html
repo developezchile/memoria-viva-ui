@@ -1,0 +1,106 @@
+<mv-header title="Historial emocional" back="/duelo">
+  <a class="icon-btn" routerLink="/duelo" aria-label="Registrar una emoción">
+    <mv-icon name="plus" [size]="22" />
+  </a>
+</mv-header>
+
+<div class="screen-body with-nav">
+  @if (logs().length === 0) {
+    <mv-empty-state emoji="🌾" title="Tu historial está esperando"
+      message="Cuando registres cómo te sientes, aquí verás el camino de tu duelo, día a día.">
+      <a class="btn-primary" routerLink="/duelo">Registrar mi primera emoción</a>
+    </mv-empty-state>
+  } @else {
+    <div class="content">
+      <p class="intro emotive">Tu camino, sin prisa</p>
+
+      <!-- Gráfico de evolución -->
+      <figure class="card chart-card">
+        <div class="chart-legend" aria-hidden="true">
+          <span>Más sereno ↑</span>
+          <span>↓ Más difícil</span>
+        </div>
+        <div #scroller class="chart-scroll" tabindex="0" role="region" aria-label="Gráfico de bienestar (resumen debajo)">
+          <svg [attr.width]="chartW()" [attr.height]="chartH" [attr.viewBox]="'0 0 ' + chartW() + ' ' + chartH"
+            aria-hidden="true">
+            @for (lv of gridLevels; track lv) {
+              <line class="grid" x1="0" [attr.x2]="chartW()" [attr.y1]="yFor(lv)" [attr.y2]="yFor(lv)" />
+            }
+            @if (areaPath()) {
+              <path class="area" [attr.d]="areaPath()" />
+            }
+            <path class="line" [attr.d]="linePath()" />
+            @for (p of points(); track p.log.id) {
+              <circle class="dot" [attr.cx]="p.x" [attr.cy]="p.y" r="13" [attr.stroke]="p.info.color" />
+              <text class="marker" [attr.x]="p.x" [attr.y]="p.y + 5">{{ p.info.emoji }}</text>
+              <text class="date" [attr.x]="p.x" [attr.y]="chartH - 10">{{ p.log.date | date: 'dd MMM' }}</text>
+            }
+          </svg>
+        </div>
+        <figcaption>{{ summary() }}</figcaption>
+      </figure>
+
+      <!-- Análisis -->
+      <section aria-labelledby="analysis-title">
+        <h2 id="analysis-title" class="section-title">Análisis</h2>
+        @let t = trendText();
+        <div class="card trend" [class]="'trend-' + (trend() ?? 'none')">
+          <span class="trend-emoji" aria-hidden="true">{{ t.emoji }}</span>
+          <div>
+            <p class="trend-label">{{ t.label }}</p>
+            <p class="trend-text">{{ t.text }}</p>
+          </div>
+        </div>
+        <div class="stats">
+          @if (topEmotion(); as top) {
+            <div class="card stat">
+              <span class="stat-emoji" aria-hidden="true">{{ top.info.emoji }}</span>
+              <span class="stat-value">{{ top.info.label }}</span>
+              <span class="stat-label">Más frecuente ({{ top.count }})</span>
+            </div>
+          }
+          <div class="card stat">
+            <span class="stat-value big">{{ avgIntensity() | number: '1.1-1' }}</span>
+            <span class="stat-label">Intensidad media de 5</span>
+          </div>
+          <div class="card stat">
+            <span class="stat-value big">{{ last30() }}</span>
+            <span class="stat-label">Registros en 30 días</span>
+          </div>
+        </div>
+        <a class="btn-secondary resources" routerLink="/duelo/recursos">
+          <mv-icon name="book" [size]="20" color="#A0503E" /> Ver recursos
+        </a>
+      </section>
+
+      <!-- Registros -->
+      <section aria-labelledby="records-title">
+        <h2 id="records-title" class="section-title">Registros recientes</h2>
+        <ul class="records">
+          @for (l of shown(); track l.id) {
+            @let e = info(l);
+            <li class="card record">
+              <span class="circle" [style.background]="e.color + '33'" aria-hidden="true">{{ e.emoji }}</span>
+              <div class="record-info">
+                <div class="record-top">
+                  <strong>{{ e.label }}</strong>
+                  <span class="chip" [style.background]="e.color + '26'">{{ intensityLabel(l.intensity) }} · {{ l.intensity }}/5</span>
+                </div>
+                <p class="record-date">{{ l.date | date: "EEEE d 'de' MMMM, y" }}</p>
+                @if (l.note) {
+                  <p class="record-note">“{{ l.note }}”</p>
+                }
+              </div>
+              <button type="button" class="icon-btn" [attr.aria-label]="'Eliminar registro de ' + e.label" (click)="remove(l)">
+                <mv-icon name="trash" [size]="18" color="#A89070" />
+              </button>
+            </li>
+          }
+        </ul>
+        @if (shown().length < logs().length) {
+          <button type="button" class="btn-link more" (click)="showMore()">Ver registros anteriores</button>
+        }
+      </section>
+    </div>
+  }
+</div>

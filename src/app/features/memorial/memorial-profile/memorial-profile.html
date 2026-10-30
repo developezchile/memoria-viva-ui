@@ -1,0 +1,142 @@
+@let m = memorial();
+<mv-header [title]="m ? m.name : 'Perfil memorial'" back="/familia" />
+
+@if (m) {
+  <div class="screen-body with-nav">
+    <!-- Portada: Quillay para quien tiene árbol, arcoíris suave para mascotas -->
+    <div
+      class="cover"
+      [class.rainbow]="m.kind === 'mascota'"
+      [class.tree]="m.kind === 'persona' && !!m.tree"
+      [style.background-image]="m.kind === 'persona' && m.tree ? 'url(assets/img/quillay.jpg)' : null"
+    >
+      @if (m.kind === 'mascota') {
+        <button type="button" class="rainbow-btn" aria-label="El Puente del Arcoíris" (click)="rainbowOpen.set(true)">🌈</button>
+      }
+    </div>
+
+    <section class="hero">
+      <div class="photo"><mv-person-avatar [id]="m.id" [size]="112" /></div>
+      <h2 class="name">{{ m.name }}</h2>
+      <p class="years">
+        {{ toDate(m.birthDate) | date: 'y' }} – {{ toDate(m.deathDate) | date: 'y' }}
+        @if (m.species) {
+          · {{ m.species }}
+        }
+      </p>
+      <p class="epitaph emotive">{{ m.epitaph }}</p>
+      @if (m.bio) {
+        <p class="bio">{{ m.bio }}</p>
+      }
+    </section>
+
+    @if (m.tree; as tree) {
+      <section class="card tree-card" aria-label="Su árbol en el jardín">
+        <div class="tree-ic"><mv-icon name="tree" color="#737B4C" [size]="28" /></div>
+        <div class="tree-info">
+          <p class="tree-title">{{ tree.species }} · {{ tree.garden }}</p>
+          <p class="tree-sub">Plantado el {{ toDate(tree.plantedAt) | date: 'longDate' }} · {{ tree.heightM }} m de altura</p>
+          <p class="tree-grow emotive">Creciendo hace {{ treeAge() }}</p>
+        </div>
+      </section>
+    }
+
+    <section class="homage" aria-labelledby="homage-title">
+      <h2 id="homage-title" class="sr-only">Rendir homenaje</h2>
+      <div class="counters">
+        <span><span aria-hidden="true">🌸</span> {{ flowers() }} {{ flowers() === 1 ? 'flor' : 'flores' }}</span>
+        <span><span aria-hidden="true">🕯️</span> {{ candles() }} {{ candles() === 1 ? 'vela' : 'velas' }}</span>
+      </div>
+      <div class="homage-btns">
+        @for (k of kinds; track k.kind) {
+          <button type="button" class="homage-btn" (click)="openTribute(k.kind)">
+            <span class="em" aria-hidden="true">{{ k.emoji }}</span>
+            {{ k.action }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <a class="vault-btn" [routerLink]="['/memorial', m.id, 'boveda']">
+      <span class="vault-ic"><mv-icon name="lock" color="#D4A843" /></span>
+      <span class="vault-txt">
+        <strong>Bóveda del tiempo</strong>
+        <small>{{ vaultCount() }} {{ vaultCount() === 1 ? 'mensaje guardado' : 'mensajes guardados' }} con amor</small>
+      </span>
+      <mv-icon name="chevron-right" color="#EBDFC6" />
+    </a>
+
+    <section class="block" aria-labelledby="wall-title">
+      <h2 id="wall-title" class="section-title">Muro de homenajes</h2>
+      @for (t of visibleTributes(); track t.id) {
+        <div class="tribute">
+          <mv-person-avatar [id]="t.authorId" [size]="36" />
+          <div class="t-body">
+            <p class="t-top">
+              <strong>{{ family.nameOf(t.authorId) }}</strong>
+              <span class="t-kind" aria-hidden="true">{{ emoji[t.kind] }}</span>
+            </p>
+            @if (t.text) {
+              <p class="t-text">{{ t.text }}</p>
+            } @else {
+              <p class="t-text muted">{{ t.kind === 'vela' ? 'Encendió una vela' : 'Dejó una flor' }}</p>
+            }
+            <p class="t-ago">{{ t.createdAt | timeAgo }}</p>
+          </div>
+        </div>
+      } @empty {
+        <p class="muted">Sé quien deje el primer homenaje.</p>
+      }
+      @if (tributes().length > 5) {
+        <button type="button" class="btn-link more" (click)="showAll.set(!showAll())">
+          {{ showAll() ? 'Ver menos' : 'Ver los ' + tributes().length + ' homenajes' }}
+        </button>
+      }
+    </section>
+
+    <section class="block" aria-labelledby="memories-title">
+      <h2 id="memories-title" class="section-title">Recuerdos compartidos</h2>
+      @if (memories().length) {
+        <div class="memories">
+          @for (p of memories(); track p.id) {
+            <a class="memory" [routerLink]="['/familia/post', p.id]" [attr.aria-label]="'Recuerdo de ' + family.nameOf(p.authorId)">
+              @if (p.mediaId && p.mediaType !== 'video') {
+                <img [src]="(p.mediaId | mediaUrl | async) ?? ''" alt="" />
+              } @else if (p.imageUrl) {
+                <img [src]="p.imageUrl" alt="" loading="lazy" />
+              } @else {
+                <div class="memory-text">{{ p.mediaType === 'video' ? '🎬 ' : '' }}{{ p.text }}</div>
+              }
+              <span class="memory-by">{{ family.nameOf(p.authorId) }} · {{ p.createdAt | timeAgo }}</span>
+            </a>
+          }
+        </div>
+      } @else {
+        <p class="muted">Cuando alguien etiquete a {{ m.name }} en el muro familiar, el recuerdo aparecerá aquí.</p>
+      }
+    </section>
+  </div>
+
+  <!-- Modal 38 · Dejar homenaje -->
+  @if (tributeKind(); as kind) {
+    <mv-tribute-sheet [memorial]="m" [initialKind]="kind" (closed)="closeTribute()" />
+  }
+
+  <!-- Easter egg · Puente del Arcoíris -->
+  <mv-sheet [open]="rainbowOpen()" title="El Puente del Arcoíris" (closed)="rainbowOpen.set(false)">
+    <div class="rainbow-text">
+      <p class="emotive">Del otro lado del arcoíris hay un prado verde…</p>
+      <p>Allí {{ m.name }} corre libre, sin dolor, con agua fresca y sol tibio. Juega, descansa y te espera sin apuro.</p>
+      <p>Su amor sigue aquí, contigo, en cada recuerdo. Y un día cruzarán juntos el puente.</p>
+    </div>
+    <div sheet-actions>
+      <a class="btn-primary" routerLink="/duelo/recursos/arcoiris" (click)="rainbowOpen.set(false)">Leer la historia completa</a>
+    </div>
+  </mv-sheet>
+} @else {
+  <div class="screen-body with-nav">
+    <mv-empty-state emoji="🕊️" title="No encontramos este perfil" message="Puede que el enlace no sea correcto.">
+      <a class="btn-primary" routerLink="/familia">Volver al muro familiar</a>
+    </mv-empty-state>
+  </div>
+}

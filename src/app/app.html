@@ -1,0 +1,14 @@
+<div class="stage">
+  <div class="phone">
+    <div class="phone-notch" aria-hidden="true"></div>
+    <div class="phone-screen" [class.has-nav]="!!tab()">
+      <main class="outlet">
+        <router-outlet />
+      </main>
+      @if (tab()) {
+        <mv-bottom-nav [active]="tab()" />
+      }
+      <mv-overlays />
+    </div>
+  </div>
+</div>

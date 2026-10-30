@@ -1,0 +1,146 @@
+<mv-header title="Mi Perfil">
+  <a class="icon-btn" routerLink="/perfil/configuracion" aria-label="Configuración">
+    <mv-icon name="settings" />
+  </a>
+</mv-header>
+
+<div class="screen-body with-nav">
+  @let m = me();
+  <!-- Cabecera -->
+  <section class="hero">
+    @if (m) {
+      <mv-person-avatar [id]="m.id" [size]="88" />
+      <h2 class="name">{{ m.name }}</h2>
+      <p class="relation">{{ m.relation }}@if (m.isAdmin) { · Administradora/or }</p>
+    }
+    <p class="family">
+      <mv-icon name="tree" [size]="16" color="#737B4C" />
+      Familia {{ family().surname }} · {{ family().garden }}
+    </p>
+  </section>
+
+  <!-- Estadísticas -->
+  <section class="stats" aria-label="Estadísticas">
+    <div class="stat"><strong>{{ posts().length }}</strong><span>Publicaciones</span></div>
+    <div class="stat"><strong>{{ logs().length }}</strong><span>Estados</span></div>
+    <div class="stat"><strong>{{ diary().length }}</strong><span>Diario</span></div>
+  </section>
+
+  <!-- Mi Herencia -->
+  <section class="pad">
+    <a class="card heritage" routerLink="/perfil/herencia">
+      <span class="heritage-icon" aria-hidden="true">💌</span>
+      <span class="heritage-text">
+        <strong>Mi Herencia</strong>
+        <span>
+          @if (heritageCount() === 0) {
+            Deja palabras para el futuro
+          } @else if (heritageCount() === 1) {
+            1 mensaje programado
+          } @else {
+            {{ heritageCount() }} mensajes programados
+          }
+        </span>
+      </span>
+      <mv-icon name="chevron-right" [size]="20" color="#A89070" />
+    </a>
+  </section>
+
+  <!-- Seres queridos -->
+  @if (memorials().length) {
+    <section class="pad">
+      <h3 class="section-title">Mis seres queridos</h3>
+      <div class="loved scroll-hide">
+        @for (mem of memorials(); track mem.id) {
+          <a class="loved-item" [routerLink]="['/memorial', mem.id]">
+            <mv-person-avatar [id]="mem.id" [size]="60" />
+            <span>{{ mem.name }}</span>
+          </a>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Pestañas -->
+  <div class="tabs" role="tablist" aria-label="Mi actividad">
+    @for (t of tabs; track t.id) {
+      <button
+        type="button"
+        role="tab"
+        class="tab"
+        [class.active]="tab() === t.id"
+        [attr.aria-selected]="tab() === t.id"
+        (click)="tab.set(t.id)"
+      >
+        {{ t.label }}
+      </button>
+    }
+  </div>
+
+  <section class="pad tab-panel" role="tabpanel">
+    @switch (tab()) {
+      @case ('posts') {
+        @for (p of postPreview(); track p.id) {
+          <a class="card preview" [routerLink]="['/familia/post', p.id]">
+            @let src = (p.mediaId | mediaUrl | async) ?? p.imageUrl;
+            @if (src && p.mediaType !== 'video') {
+              <img class="thumb" [src]="src" alt="Foto de la publicación" />
+            }
+            <span class="preview-text">
+              <span class="excerpt">{{ p.text || 'Publicación sin texto' }}</span>
+              <span class="meta">{{ p.createdAt | timeAgo }} · {{ p.comments.length }} comentarios</span>
+            </span>
+          </a>
+        } @empty {
+          <mv-empty-state emoji="📷" title="Aún no has publicado" message="Comparte un recuerdo con tu familia cuando te sientas lista o listo.">
+            <a class="btn-secondary" routerLink="/familia">Ir a Mi Familia</a>
+          </mv-empty-state>
+        }
+        @if (posts().length) {
+          <a class="see-all" routerLink="/familia">Ver todo en Mi Familia</a>
+        }
+      }
+      @case ('estados') {
+        @for (l of logPreview(); track l.id) {
+          @let e = emotions[l.emotion];
+          <div class="card preview">
+            <span class="emo" [style.background]="e.color + '33'" aria-hidden="true">{{ e.emoji }}</span>
+            <span class="preview-text">
+              <span class="excerpt"><strong>{{ e.label }}</strong> · {{ l.date | date: 'd MMM' }}</span>
+              <span class="dots" [attr.aria-label]="'Intensidad ' + l.intensity + ' de 5'">
+                @for (on of dots(l.intensity); track $index) {
+                  <i [class.on]="on" [style.background]="on ? e.color : null"></i>
+                }
+              </span>
+            </span>
+          </div>
+        } @empty {
+          <mv-empty-state emoji="🌤️" title="Sin estados registrados" message="Registrar cómo te sientes te ayuda a mirar tu proceso con cariño.">
+            <a class="btn-secondary" routerLink="/duelo">Registrar cómo me siento</a>
+          </mv-empty-state>
+        }
+        @if (logs().length) {
+          <a class="see-all" routerLink="/perfil/estados">Ver todo</a>
+        }
+      }
+      @case ('diario') {
+        @for (d of diaryPreview(); track d.id) {
+          <a class="card preview" routerLink="/perfil/diario">
+            <span class="preview-text">
+              <span class="excerpt"><strong>{{ d.title || 'Sin título' }}</strong></span>
+              <span class="meta">{{ d.createdAt | date: "d 'de' MMMM" }}</span>
+              <span class="snippet">{{ d.text }}</span>
+            </span>
+          </a>
+        } @empty {
+          <mv-empty-state emoji="📔" title="Tu diario está en blanco" message="Un espacio privado solo para ti.">
+            <a class="btn-secondary" routerLink="/perfil/diario">Escribir mi primera entrada</a>
+          </mv-empty-state>
+        }
+        @if (diary().length) {
+          <a class="see-all" routerLink="/perfil/diario">Ver todo</a>
+        }
+      }
+    }
+  </section>
+</div>
